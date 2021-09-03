@@ -1,0 +1,109 @@
+--FIRST SQL PROJECT
+
+Link to Dataset: https://ourworldindata.org/covid-deaths
+
+-- All SQLQueries Used 
+
+
+SELECT * 
+FROM Portfolio_project..Covid_deaths
+WHERE continent is not null
+ORDER BY 3,4
+--( Continent is not null gets rid of continent names from appearing in locations (sinxe locations should be only countries))
+
+
+SELECT * 
+FROM Portfolio_project..Covid_Vaccinations
+ORDER BY 3,4
+
+--Select data needed
+
+SELECT location,date,total_cases, new_cases,total_deaths,population
+FROM Portfolio_project..Covid_deaths
+ORDER BY 1,2
+
+--Finding patients deaths to patients diagnosed percentage
+--Shows liklihood of dying if you are tested positive
+
+SELECT location,date,total_cases,total_deaths,(total_deaths/total_cases)*100 as Deaths_per_cases_found
+FROM Portfolio_project..Covid_deaths
+WHERE location like '%India%'
+ORDER BY 1,2
+
+
+--People Infected out of the entire population
+
+SELECT location,date,population,total_cases, (total_cases/population)*100 as cases_per_population
+FROM Portfolio_project..Covid_deaths
+WHERE location like '%India%'
+ORDER BY 1,2
+
+
+--Countries which have the highest infected ratio
+
+SELECT location , population, max(total_cases) as highest_infected , max((total_cases/population)*100) as highest_ratio_of_infectedpeople
+FROM Portfolio_project..Covid_deaths
+GROUP BY location, population
+ORDER BY highest_ratio_of_infectedpeople desc
+
+-- Countries with highest death count per population
+-- Here we have casted total_deaths from nvarchar to integer
+SELECT location , max(cast(total_deaths as int)) as total_death_count ,
+max((total_deaths/population)*100) as highest_deaths_per_population
+
+FROM Portfolio_project..Covid_deaths
+WHERE continent is not null 
+GROUP BY location
+ORDER BY total_death_count desc
+
+--DEATH COUNT OF CONTINENTS
+-- Here we did continent is null condition cause we just want continent death count not countries individual death count
+SELECT location, max(cast(total_deaths as int)) as total_death_count
+FROM Portfolio_project..Covid_deaths
+WHERE continent is null
+GROUP BY location
+ORDER BY total_death_count desc
+
+-- Percentage of new total deaths each day across the world
+
+SELECT date, sum(new_cases) as total_cases, sum(cast(new_deaths as int)) as total_deaths, 
+(sum(cast(new_deaths as int))/sum(new_cases)) *100 as total_death_percentage
+FROM Portfolio_project..Covid_deaths
+WHERE continent is not null
+GROUP BY date
+ORDER BY 1
+
+-- Total death percentage globally till date 
+
+SELECT sum(new_cases) as total_cases, sum(cast(new_deaths as int)) as total_deaths, 
+(sum(cast(new_deaths as int))/sum(new_cases)) *100 as total_death_percentage
+FROM Portfolio_project..Covid_deaths
+order by 1
+
+
+
+-- JOINS
+
+SELECT * FROM Portfolio_project..Covid_deaths as dea
+JOIN Portfolio_project..Covid_Vaccinations as vac
+ON dea.location=vac.location
+AND dea.date=vac.date
+
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+FROM Portfolio_project..Covid_deaths as dea
+JOIN Portfolio_project..Covid_Vaccinations as vac
+ON dea.location=vac.location
+AND dea.date=vac.date
+WHERE dea.continent is not null
+ORDER BY 2,3
+
+
+-- Summing vaccination count of each day of every country
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+SUM(CONVERT(int,vac.new_vaccinations)) OVER (Partition by dea.location order by dea.location,dea.date) as incrementing_vaccinations
+FROM Portfolio_project..Covid_deaths as dea
+JOIN Portfolio_project..Covid_Vaccinations as vac
+ON dea.location=vac.location
+AND dea.date=vac.date
+WHERE dea.continent is not null
+ORDER BY 2,3
